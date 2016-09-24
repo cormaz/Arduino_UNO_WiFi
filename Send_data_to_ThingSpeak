@@ -1,0 +1,79 @@
+/*Antonio La Mura*/
+
+#include <Wire.h>
+#include <Ciao.h>
+#include <dht.h>
+
+#define DHT22_PIN 5
+#define CONNECTOR     "rest"
+#define SERVER_ADDR   "api.thingspeak.com"
+#define APIKEY_THINGSPEAK  "7VCEDYHA2S17R7F4"
+
+dht DHT;
+
+double temp = 0;
+double hum = 0;
+double tempnew = 0;
+double humnew = 0;
+
+short i = 0;
+
+void setup() {
+  Serial.begin(115200);
+  Ciao.begin(); // CIAO INIT
+}
+
+void loop() {
+
+  int chk = DHT.read22(DHT22_PIN);
+
+  switch (chk)
+  {
+    case DHTLIB_OK:
+      break;
+    case DHTLIB_ERROR_CHECKSUM:
+      break;
+    case DHTLIB_ERROR_TIMEOUT:
+      break;
+    default:
+      break;
+  }
+
+  tempnew = DHT.temperature;
+  humnew = DHT.humidity;
+
+  if (tempnew != temp || humnew != hum) {
+    temp = tempnew;
+    hum = humnew;
+  }
+  
+  if (i == 50) {
+    webserver();
+    i = 0;
+  }
+  i = i + 1;
+  
+  delay(2000);
+}
+
+void webserver() {
+  
+  String uri = "/update?api_key=";
+         uri += APIKEY_THINGSPEAK;
+         uri += "&field1=";
+         uri += String(temp);
+         uri += "&field2=";
+         uri += String(hum);
+
+  Ciao.println("Send data on ThingSpeak Channel");
+
+  CiaoData data = Ciao.write(CONNECTOR, SERVER_ADDR, uri);
+
+  if (!data.isEmpty()) {
+    Ciao.println( "State: " + String (data.get(1)) );
+    Ciao.println( "Response: " + String (data.get(2)) );
+  }
+  else {
+    Ciao.println("Write Error");
+  }
+}
